@@ -21,9 +21,9 @@ def render():
     monthly  = get_monthly_totals()
 
     if 'date' not in monthly.columns:
-        monthly = monthly.sort_values(['Year','Month_Num']).reset_index(drop=True)
+        monthly = monthly.sort_values(['YEAR','Month_Num']).reset_index(drop=True)
         monthly['date'] = pd.to_datetime(
-            monthly['Year'].astype(str)+'-'+monthly['Month_Num'].astype(str).str.zfill(2)+'-01')
+            monthly['YEAR'].astype(str)+'-'+monthly['Month_Num'].astype(str).str.zfill(2)+'-01')
 
     total_deficit = ann['balance'].sum()
     worst_yr  = ann.loc[ann['balance'].idxmin()]
@@ -39,8 +39,8 @@ def render():
 
     c1,c2,c3,c4 = st.columns(4)
     kpi(c1,"Cumulative Deficit",fmt_usd(abs(total_deficit)),f"{data_period} Total",'red')
-    kpi(c2,"Worst Deficit Year",str(int(worst_yr['Year'])),fmt_usd(abs(worst_yr['balance']))+" deficit",'red')
-    kpi(c3,"Best Coverage Year",str(int(best_yr['Year'])),f"{best_yr['coverage_ratio']}% export coverage",'green')
+    kpi(c2,"Worst Deficit Year",str(int(worst_yr['YEAR'])),fmt_usd(abs(worst_yr['balance']))+" deficit",'red')
+    kpi(c3,"Best Coverage Year",str(int(best_yr['YEAR'])),f"{best_yr['coverage_ratio']}% export coverage",'green')
     kpi(c4,"Months in Deficit",f"{months_def}/{len(monthly)}","Out of all months",'gold')
     st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
 
@@ -49,11 +49,11 @@ def render():
     with col1:
         st.markdown('<div class="chart-card"><div class="chart-title">📊 Annual Trade Balance Decomposition (USD Billions)</div>', unsafe_allow_html=True)
         fig = go.Figure()
-        fig.add_trace(go.Bar(x=ann['Year'], y=ann['exports']/1e6, name='Exports', marker_color='#10d9a0', opacity=0.9,
+        fig.add_trace(go.Bar(x=ann['YEAR'], y=ann['exports']/1e6, name='Exports', marker_color='#10d9a0', opacity=0.9,
             hovertemplate='<b>Exports %{x}</b>: $%{y:.2f}B<extra></extra>'))
-        fig.add_trace(go.Bar(x=ann['Year'], y=-ann['imports']/1e6, name='Imports', marker_color='#f43f5e', opacity=0.9,
+        fig.add_trace(go.Bar(x=ann['YEAR'], y=-ann['imports']/1e6, name='Imports', marker_color='#f43f5e', opacity=0.9,
             hovertemplate='<b>Imports %{x}</b>: $%{y:.2f}B<extra></extra>'))
-        fig.add_trace(go.Scatter(x=ann['Year'], y=ann['balance']/1e6,
+        fig.add_trace(go.Scatter(x=ann['YEAR'], y=ann['balance']/1e6,
             mode='lines+markers+text', name='Balance',
             line=dict(color='#f59e0b',width=2.5,dash='dot'), marker=dict(size=10,color='#f59e0b'),
             text=[fmt_usd(v) for v in ann['balance']],
@@ -71,7 +71,7 @@ def render():
         fig2.add_hrect(y0=50, y1=75, fillcolor='rgba(245,158,11,0.04)', line_width=0)
         fig2.add_hline(y=100, line=dict(color='rgba(16,217,160,0.3)',dash='dot',width=1.5),
             annotation_text='100% balanced', annotation_font=dict(color='#10d9a0',size=9))
-        fig2.add_trace(go.Scatter(x=ann['Year'], y=ann['coverage_ratio'],
+        fig2.add_trace(go.Scatter(x=ann['YEAR'], y=ann['coverage_ratio'],
             mode='lines+markers+text', fill='tozeroy', fillcolor='rgba(96,165,250,0.07)',
             line=dict(color='#60a5fa',width=3), marker=dict(size=12,color='#60a5fa'),
             text=[f"{v}%" for v in ann['coverage_ratio']],
@@ -109,9 +109,9 @@ def render():
     col1, col2 = st.columns([1,2])
 
     with col1:
-        yr_sel = st.selectbox("Year for sector analysis:", sorted(ann['Year'].unique(),reverse=True), key='bal_yr')
-        e_sec = exp[exp['Year']==yr_sel].groupby('CATEGORY')['DOLLARS'].sum()
-        i_sec = imp[imp['Year']==yr_sel].groupby('CATEGORY')['DOLLARS'].sum()
+        yr_sel = st.selectbox("Year for sector analysis:", sorted(ann['YEAR'].unique(),reverse=True), key='bal_yr')
+        e_sec = exp[exp['YEAR']==yr_sel].groupby('CATEGORY')['DOLLARS'].sum()
+        i_sec = imp[imp['YEAR']==yr_sel].groupby('CATEGORY')['DOLLARS'].sum()
         sec_df = pd.DataFrame({'exports':e_sec,'imports':i_sec}).fillna(0)
         sec_df['deficit'] = sec_df['exports'] - sec_df['imports']
         sec_df = sec_df.sort_values('deficit')
@@ -134,19 +134,19 @@ def render():
     with col2:
         st.markdown('<div class="chart-card"><div class="chart-title">📋 Full Trade Balance Summary — All Years</div>', unsafe_allow_html=True)
         summary = ann.copy()
-        summary['Year']     = summary['Year'].astype(int)
+        summary['YEAR']     = summary['YEAR'].astype(int)
         summary['Exports']  = summary['exports'].apply(fmt_usd)
         summary['Imports']  = summary['imports'].apply(fmt_usd)
         summary['Balance']  = summary['balance'].apply(fmt_usd)
         summary['Coverage'] = summary['coverage_ratio'].apply(lambda x: f"{x}%")
         summary['Volume']   = summary['trade_volume'].apply(fmt_usd)
-        st.dataframe(summary[['Year','Exports','Imports','Balance','Coverage','Volume']].set_index('Year'),
+        st.dataframe(summary[['YEAR','Exports','Imports','Balance','Coverage','Volume']].set_index('YEAR'),
                     use_container_width=True)
 
         st.markdown('<div class="chart-title" style="margin-top:1rem;">📅 Monthly Balance Pivot (USD Millions)</div>', unsafe_allow_html=True)
         m_piv = monthly.copy()
         m_piv['bm'] = (m_piv['balance']/1e3).round(1)
-        pt = m_piv.pivot_table(index='Year', columns='Month', values='bm')
+        pt = m_piv.pivot_table(index='YEAR', columns='MONTH', values='bm')
         pt = pt.reindex(columns=[m for m in MONTH_ORDER if m in pt.columns])
         st.dataframe(pt.style.background_gradient(cmap='RdYlGn', axis=None), use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
