@@ -21,7 +21,7 @@ def render():
     exp, _ = load_data()
     ann    = get_annual_totals()
     monthly= get_monthly_totals()
-    years  = sorted(ann['Year'].unique(), reverse=True)
+    years  = sorted(ann['YEAR'].unique(), reverse=True)
 
     col_f1, col_f2, col_f3 = st.columns(3)
     with col_f1:
@@ -33,8 +33,8 @@ def render():
         categories = ['All Categories'] + sorted(exp['CATEGORY'].dropna().unique())
         cat_sel = st.selectbox("Category", categories, key='exp_cat')
 
-    df_y  = exp[exp['Year']==year_sel]
-    df_py = exp[exp['Year']==compare_year]
+    df_y  = exp[exp['YEAR']==year_sel]
+    df_py = exp[exp['YEAR']==compare_year]
     if cat_sel != 'All Categories':
         df_y  = df_y[df_y['CATEGORY']==cat_sel]
         df_py = df_py[df_py['CATEGORY']==cat_sel]
@@ -70,12 +70,12 @@ def render():
 
     with col1:
         st.markdown('<div class="chart-card"><div class="chart-title">📊 Category Export Trends (Annual, USD Billions)</div>', unsafe_allow_html=True)
-        ec = exp_cat.groupby(['Year','CATEGORY'])['DOLLARS'].sum().reset_index()
+        ec = exp_cat.groupby(['YEAR','CATEGORY'])['DOLLARS'].sum().reset_index()
         fig = go.Figure()
         for cat in sorted(ec['CATEGORY'].unique()):
-            d = ec[ec['CATEGORY']==cat].sort_values('Year')
+            d = ec[ec['CATEGORY']==cat].sort_values('YEAR')
             c = CATEGORY_COLORS_EXP.get(cat,'#64748b')
-            fig.add_trace(go.Scatter(x=d['Year'], y=d['DOLLARS']/1e6,
+            fig.add_trace(go.Scatter(x=d['YEAR'], y=d['DOLLARS']/1e6,
                 name=cat.replace(' GROUP','').title(), mode='lines+markers',
                 line=dict(color=c,width=2.5), marker=dict(size=8,color=c),
                 hovertemplate=f'<b>{cat}</b> %{{x}}: $%{{y:.2f}}B<extra></extra>'))
@@ -86,16 +86,16 @@ def render():
 
     with col2:
         st.markdown(f'<div class="chart-card"><div class="chart-title">📅 Monthly Exports — {year_sel} vs {compare_year}</div>', unsafe_allow_html=True)
-        mon_y  = exp[exp['Year']==year_sel].groupby('Month')['DOLLARS'].sum().reset_index()
-        mon_py = exp[exp['Year']==compare_year].groupby('Month')['DOLLARS'].sum().reset_index()
+        mon_y  = exp[exp['YEAR']==year_sel].groupby('MONTH')['DOLLARS'].sum().reset_index()
+        mon_py = exp[exp['YEAR']==compare_year].groupby('MONTH')['DOLLARS'].sum().reset_index()
         for df in [mon_y, mon_py]:
-            df['MC'] = pd.Categorical(df['Month'], categories=MONTH_ORDER, ordered=True)
+            df['MC'] = pd.Categorical(df['MONTH'], categories=MONTH_ORDER, ordered=True)
             df.sort_values('MC', inplace=True)
         fig2 = go.Figure()
-        fig2.add_trace(go.Bar(x=mon_py['Month'].str[:3], y=mon_py['DOLLARS']/1e3,
+        fig2.add_trace(go.Bar(x=mon_py['MONTH'].str[:3], y=mon_py['DOLLARS']/1e3,
             name=str(compare_year), marker_color='rgba(255,255,255,0.1)',
             hovertemplate=f'<b>%{{x}} {compare_year}</b>: $%{{y:.0f}}M<extra></extra>'))
-        fig2.add_trace(go.Bar(x=mon_y['Month'].str[:3], y=mon_y['DOLLARS']/1e3,
+        fig2.add_trace(go.Bar(x=mon_y['MONTH'].str[:3], y=mon_y['DOLLARS']/1e3,
             name=str(year_sel), marker_color='#10d9a0',
             hovertemplate=f'<b>%{{x}} {year_sel}</b>: $%{{y:.0f}}M<extra></extra>'))
         fig2.update_layout(**pl(300, yaxis=dict(title='USD Millions'), barmode='group',
@@ -107,7 +107,7 @@ def render():
     col1, col2 = st.columns(2)
     with col1:
         st.markdown(f'<div class="chart-card"><div class="chart-title">🏆 Top 15 Export Products — {year_sel}</div>', unsafe_allow_html=True)
-        tp = exp[exp['Year']==year_sel].groupby('PRODUCT')['DOLLARS'].sum().reset_index()
+        tp = exp[exp['YEAR']==year_sel].groupby('PRODUCT')['DOLLARS'].sum().reset_index()
         tp = tp[tp['PRODUCT'].notna() & (tp['PRODUCT']!='')].nlargest(15,'DOLLARS').sort_values('DOLLARS')
         fig3 = go.Figure(go.Bar(
             x=tp['DOLLARS']/1e3, y=tp['PRODUCT'], orientation='h',
@@ -125,8 +125,8 @@ def render():
 
     with col2:
         st.markdown(f'<div class="chart-card"><div class="chart-title">📈 YoY Growth by Product — {year_sel} vs {compare_year}</div>', unsafe_allow_html=True)
-        p_y   = exp[exp['Year']==year_sel].groupby('PRODUCT')['DOLLARS'].sum()
-        p_py  = exp[exp['Year']==compare_year].groupby('PRODUCT')['DOLLARS'].sum()
+        p_y   = exp[exp['YEAR']==year_sel].groupby('PRODUCT')['DOLLARS'].sum()
+        p_py  = exp[exp['YEAR']==compare_year].groupby('PRODUCT')['DOLLARS'].sum()
         gdf   = pd.DataFrame({'cur':p_y,'prev':p_py}).dropna()
         gdf   = gdf[(gdf['prev']>0) & (gdf['cur']>50000)]
         gdf['growth'] = (gdf['cur']-gdf['prev'])/gdf['prev']*100
@@ -148,11 +148,11 @@ def render():
 
     # ── Stacked area composition ────────────────────────────────────────────
     st.markdown('<div class="chart-card"><div class="chart-title">📦 Export Composition — Stacked Area (Monthly)</div>', unsafe_allow_html=True)
-    exp_monthly_cat = exp.groupby(['Year','Month','Month_Num','CATEGORY'])['DOLLARS'].sum().reset_index()
-    exp_monthly_cat['MC'] = pd.Categorical(exp_monthly_cat['Month'], categories=MONTH_ORDER, ordered=True)
-    exp_monthly_cat = exp_monthly_cat.sort_values(['Year','Month_Num']).reset_index(drop=True)
+    exp_monthly_cat = exp.groupby(['YEAR','MONTH','Month_Num','CATEGORY'])['DOLLARS'].sum().reset_index()
+    exp_monthly_cat['MC'] = pd.Categorical(exp_monthly_cat['MONTH'], categories=MONTH_ORDER, ordered=True)
+    exp_monthly_cat = exp_monthly_cat.sort_values(['YEAR','Month_Num']).reset_index(drop=True)
     exp_monthly_cat['date'] = pd.to_datetime(
-        exp_monthly_cat['Year'].astype(str)+'-'+exp_monthly_cat['Month_Num'].astype(str).str.zfill(2)+'-01')
+        exp_monthly_cat['YEAR'].astype(str)+'-'+exp_monthly_cat['Month_Num'].astype(str).str.zfill(2)+'-01')
     pivoted = exp_monthly_cat.pivot_table(index='date', columns='CATEGORY', values='DOLLARS', aggfunc='sum').fillna(0)
 
     def hex_to_rgba(h, a=0.75):
@@ -179,7 +179,7 @@ def render():
     col1, col2 = st.columns([1,2])
     with col1:
         st.markdown(f'<div class="chart-card"><div class="chart-title">🌐 Category Share — {year_sel}</div>', unsafe_allow_html=True)
-        ec_y = exp[exp['Year']==year_sel].groupby('CATEGORY')['DOLLARS'].sum().reset_index()
+        ec_y = exp[exp['YEAR']==year_sel].groupby('CATEGORY')['DOLLARS'].sum().reset_index()
         ec_y = ec_y[ec_y['DOLLARS']>0]
         fig6 = go.Figure(go.Pie(
             labels=[c.replace(' GROUP','') for c in ec_y['CATEGORY']],
@@ -195,7 +195,7 @@ def render():
 
     with col2:
         st.markdown(f'<div class="chart-card"><div class="chart-title">⚡ Export Quantity vs Value — {year_sel} (Top Products)</div>', unsafe_allow_html=True)
-        sc = exp[(exp['Year']==year_sel) & exp['QUANTITY'].notna() & (exp['QUANTITY']>0) & (exp['DOLLARS']>10000)].copy()
+        sc = exp[(exp['YEAR']==year_sel) & exp['QUANTITY'].notna() & (exp['QUANTITY']>0) & (exp['DOLLARS']>10000)].copy()
         sc = sc.groupby(['PRODUCT','CATEGORY']).agg({'QUANTITY':'sum','DOLLARS':'sum'}).reset_index().nlargest(40,'DOLLARS')
         fig7 = px.scatter(sc, x='QUANTITY', y=sc['DOLLARS']/1e3, size=sc['DOLLARS']/1e3,
             color='CATEGORY', hover_name='PRODUCT',
