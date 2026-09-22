@@ -20,7 +20,7 @@ def render():
 
     exp, imp = load_data()
     ann = get_annual_totals()
-    years = sorted(ann['Year'].unique(), reverse=True)
+    years = sorted(ann['YEAR'].unique(), reverse=True)
 
     tab1, tab2, tab3 = st.tabs(["📤 Export Products", "📥 Import Products", "🔄 Trade Composition"])
 
@@ -33,7 +33,7 @@ def render():
             cat_list = ['All'] + sorted(exp['CATEGORY'].dropna().unique().tolist())
             cat = st.selectbox("Category", cat_list, key='prod_exp_cat')
 
-        df = exp[exp['Year']==yr].copy()
+        df = exp[exp['YEAR']==yr].copy()
         if cat != 'All':
             df = df[df['CATEGORY']==cat]
         dp = df.groupby(['CATEGORY','PRODUCT'])['DOLLARS'].sum().reset_index()
@@ -68,15 +68,15 @@ def render():
         with col2:
             st.markdown('<div class="chart-card"><div class="chart-title">📊 Top Product Share Evolution (% of total exports)</div>', unsafe_allow_html=True)
             top6 = exp.groupby('PRODUCT')['DOLLARS'].sum().nlargest(6).index
-            df6  = exp[exp['PRODUCT'].isin(top6)].groupby(['Year','PRODUCT'])['DOLLARS'].sum().reset_index()
-            tot  = exp.groupby('Year')['DOLLARS'].sum().reset_index().rename(columns={'DOLLARS':'total'})
-            df6  = df6.merge(tot, on='Year')
+            df6  = exp[exp['PRODUCT'].isin(top6)].groupby(['YEAR','PRODUCT'])['DOLLARS'].sum().reset_index()
+            tot  = exp.groupby('YEAR')['DOLLARS'].sum().reset_index().rename(columns={'DOLLARS':'total'})
+            df6  = df6.merge(tot, on='YEAR')
             df6['share'] = df6['DOLLARS']/df6['total']*100
             pal  = ['#10d9a0','#60a5fa','#f59e0b','#a78bfa','#fb923c','#f472b6']
             fig3 = go.Figure()
             for i,prod in enumerate(top6):
-                d = df6[df6['PRODUCT']==prod].sort_values('Year')
-                fig3.add_trace(go.Scatter(x=d['Year'], y=d['share'], mode='lines+markers+text',
+                d = df6[df6['PRODUCT']==prod].sort_values('YEAR')
+                fig3.add_trace(go.Scatter(x=d['YEAR'], y=d['share'], mode='lines+markers+text',
                     name=prod[:20], line=dict(color=pal[i],width=2), marker=dict(size=7),
                     text=[f"{v:.1f}%" for v in d['share']], textposition='top center',
                     textfont=dict(size=9),
@@ -88,15 +88,15 @@ def render():
 
         # Unit value analysis
         st.markdown('<div class="chart-card"><div class="chart-title">💰 Unit Value Trend — Price per MT (Top Products with Quantity Data)</div>', unsafe_allow_html=True)
-        uv = exp[(exp['QUANTITY'].notna()) & (exp['QUANTITY']>0)].groupby(['Year','PRODUCT']).agg(
+        uv = exp[(exp['QUANTITY'].notna()) & (exp['QUANTITY']>0)].groupby(['YEAR','PRODUCT']).agg(
             dollars=('DOLLARS','sum'), qty=('QUANTITY','sum')).reset_index()
         uv['unit_val'] = uv['dollars']/uv['qty']
         top_uv = uv.groupby('PRODUCT')['dollars'].sum().nlargest(8).index
         fig4 = go.Figure()
         pal2 = ['#10d9a0','#60a5fa','#f59e0b','#a78bfa','#fb923c','#f472b6','#2dd4bf','#e879f9']
         for i,prod in enumerate(top_uv):
-            d = uv[uv['PRODUCT']==prod].sort_values('Year')
-            fig4.add_trace(go.Scatter(x=d['Year'], y=d['unit_val']*1000,
+            d = uv[uv['PRODUCT']==prod].sort_values('YEAR')
+            fig4.add_trace(go.Scatter(x=d['YEAR'], y=d['unit_val']*1000,
                 mode='lines+markers', name=prod[:20], line=dict(color=pal2[i],width=2), marker=dict(size=8),
                 hovertemplate=f'<b>{prod[:20]}</b> %{{x}}: $%{{y:,.0f}}/MT<extra></extra>'))
         fig4.update_layout(**pl(300, yaxis=dict(title='USD per Metric Ton'),
@@ -113,7 +113,7 @@ def render():
             cat_list2 = ['All'] + sorted(imp['CATEGORY'].dropna().unique().tolist())
             cat2 = st.selectbox("Category", cat_list2, key='prod_imp_cat')
 
-        df2 = imp[imp['Year']==yr2].copy()
+        df2 = imp[imp['YEAR']==yr2].copy()
         if cat2 != 'All':
             df2 = df2[df2['CATEGORY']==cat2]
         dp2 = df2.groupby(['CATEGORY','PRODUCT'])['DOLLARS'].sum().reset_index()
@@ -148,15 +148,15 @@ def render():
         with col2:
             st.markdown('<div class="chart-card"><div class="chart-title">📊 Top Import Share Evolution</div>', unsafe_allow_html=True)
             top6i = imp.groupby('PRODUCT')['DOLLARS'].sum().nlargest(6).index
-            df6i  = imp[imp['PRODUCT'].isin(top6i)].groupby(['Year','PRODUCT'])['DOLLARS'].sum().reset_index()
-            toti  = imp.groupby('Year')['DOLLARS'].sum().reset_index().rename(columns={'DOLLARS':'total'})
-            df6i  = df6i.merge(toti, on='Year')
+            df6i  = imp[imp['PRODUCT'].isin(top6i)].groupby(['YEAR','PRODUCT'])['DOLLARS'].sum().reset_index()
+            toti  = imp.groupby('YEAR')['DOLLARS'].sum().reset_index().rename(columns={'DOLLARS':'total'})
+            df6i  = df6i.merge(toti, on='YEAR')
             df6i['share'] = df6i['DOLLARS']/df6i['total']*100
             pal3 = ['#f43f5e','#fb923c','#f59e0b','#60a5fa','#a78bfa','#2dd4bf']
             fig7 = go.Figure()
             for i,prod in enumerate(top6i):
-                d = df6i[df6i['PRODUCT']==prod].sort_values('Year')
-                fig7.add_trace(go.Scatter(x=d['Year'], y=d['share'], mode='lines+markers+text',
+                d = df6i[df6i['PRODUCT']==prod].sort_values('YEAR')
+                fig7.add_trace(go.Scatter(x=d['YEAR'], y=d['share'], mode='lines+markers+text',
                     name=prod.strip()[:20], line=dict(color=pal3[i],width=2), marker=dict(size=7),
                     text=[f"{v:.1f}%" for v in d['share']], textposition='top center',
                     textfont=dict(size=9),
@@ -168,10 +168,10 @@ def render():
 
     # ══════════════════════════════════════════════
     with tab3:
-        latest_yr = ann['Year'].max()
+        latest_yr = ann['YEAR'].max()
         st.markdown(f'<div class="chart-card"><div class="chart-title">📊 Export vs Import Category Comparison — {latest_yr}</div>', unsafe_allow_html=True)
-        e_c = exp[exp['Year']==latest_yr].groupby('CATEGORY')['DOLLARS'].sum().reset_index()
-        i_c = imp[imp['Year']==latest_yr].groupby('CATEGORY')['DOLLARS'].sum().reset_index()
+        e_c = exp[exp['YEAR']==latest_yr].groupby('CATEGORY')['DOLLARS'].sum().reset_index()
+        i_c = imp[imp['YEAR']==latest_yr].groupby('CATEGORY')['DOLLARS'].sum().reset_index()
         fig8 = go.Figure()
         fig8.add_trace(go.Bar(name='Exports', x=e_c['CATEGORY'], y=e_c['DOLLARS']/1e3,
             marker_color='#10d9a0', hovertemplate='<b>%{x}</b> Exports: $%{y:.0f}M<extra></extra>'))
@@ -186,12 +186,12 @@ def render():
         # Quantity trend
         st.markdown('<div class="chart-card"><div class="chart-title">📦 Quantity Trend — Top Export Products (Million MT)</div>', unsafe_allow_html=True)
         top_qty = exp[(exp['QUANTITY'].notna()) & (exp['QUANTITY']>0)].groupby('PRODUCT')['QUANTITY'].sum().nlargest(10).index
-        qty_df  = exp[exp['PRODUCT'].isin(top_qty)].groupby(['Year','PRODUCT'])['QUANTITY'].sum().reset_index()
+        qty_df  = exp[exp['PRODUCT'].isin(top_qty)].groupby(['YEAR','PRODUCT'])['QUANTITY'].sum().reset_index()
         pal4 = ['#10d9a0','#60a5fa','#f59e0b','#a78bfa','#fb923c','#f472b6','#2dd4bf','#e879f9','#84cc16','#f59e0b']
         fig9 = go.Figure()
         for i,prod in enumerate(top_qty):
-            d = qty_df[qty_df['PRODUCT']==prod].sort_values('Year')
-            fig9.add_trace(go.Bar(x=d['Year'], y=d['QUANTITY']/1e6, name=prod[:20],
+            d = qty_df[qty_df['PRODUCT']==prod].sort_values('YEAR')
+            fig9.add_trace(go.Bar(x=d['YEAR'], y=d['QUANTITY']/1e6, name=prod[:20],
                 marker_color=pal4[i%len(pal4)],
                 hovertemplate=f'<b>{prod[:20]}</b> %{{x}}: %{{y:.2f}}M MT<extra></extra>'))
         fig9.update_layout(**pl(320, yaxis=dict(title='Million MT'), barmode='group',
