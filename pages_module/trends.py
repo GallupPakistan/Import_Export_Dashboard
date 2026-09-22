@@ -37,38 +37,38 @@ def render():
     monthly  = get_monthly_totals()
 
     if 'date' not in monthly.columns:
-        monthly = monthly.sort_values(['Year','Month_Num']).reset_index(drop=True)
+        monthly = monthly.sort_values(['YEAR','Month_Num']).reset_index(drop=True)
         monthly['date'] = pd.to_datetime(
-            monthly['Year'].astype(str) + '-' +
+            monthly['YEAR'].astype(str) + '-' +
             monthly['Month_Num'].astype(str).str.zfill(2) + '-01')
 
     # ── Pre-compute everything ONCE outside tabs ──────────────────────────
-    total_years = monthly['Year'].nunique()
+    total_years = monthly['YEAR'].nunique()
 
     # Month-level year counts (to distinguish full vs partial months)
-    month_counts = (monthly.groupby('Month')['Year']
+    month_counts = (monthly.groupby('MONTH')['YEAR']
                     .count()
                     .reset_index()
-                    .rename(columns={'Year': 'n_years'}))
+                    .rename(columns={'YEAR': 'n_years'}))
 
     # Seasonality aggregates
-    seas_e = (monthly.groupby('Month')
+    seas_e = (monthly.groupby('MONTH')
               .agg(avg=('DOLLARS_exp', 'mean'), std=('DOLLARS_exp', 'std'))
               .reset_index())
-    seas_e['MC'] = pd.Categorical(seas_e['Month'], categories=MONTH_ORDER, ordered=True)
+    seas_e['MC'] = pd.Categorical(seas_e['MONTH'], categories=MONTH_ORDER, ordered=True)
     seas_e = (seas_e.sort_values('MC')
-              .merge(month_counts, on='Month', how='left')
+              .merge(month_counts, on='MONTH', how='left')
               .reset_index(drop=True))
     seas_e['avg_m'] = seas_e['avg'] / 1e3
     seas_e['std_m'] = seas_e['std'] / 1e3
     seas_e['idx']   = seas_e['avg'] / seas_e['avg'].mean() * 100
 
-    seas_i = (monthly.groupby('Month')
+    seas_i = (monthly.groupby('MONTH')
               .agg(avg=('DOLLARS_imp', 'mean'), std=('DOLLARS_imp', 'std'))
               .reset_index())
-    seas_i['MC'] = pd.Categorical(seas_i['Month'], categories=MONTH_ORDER, ordered=True)
+    seas_i['MC'] = pd.Categorical(seas_i['MONTH'], categories=MONTH_ORDER, ordered=True)
     seas_i = (seas_i.sort_values('MC')
-              .merge(month_counts, on='Month', how='left')
+              .merge(month_counts, on='MONTH', how='left')
               .reset_index(drop=True))
     seas_i['avg_m'] = seas_i['avg'] / 1e3
     seas_i['std_m'] = seas_i['std'] / 1e3
@@ -76,12 +76,12 @@ def render():
 
     partial_mask_e = seas_e['n_years'] < total_years
     partial_mask_i = seas_i['n_years'] < total_years
-    partial_months_short = seas_e[partial_mask_e]['Month'].str[:3].tolist()
+    partial_months_short = seas_e[partial_mask_e]['MONTH'].str[:3].tolist()
 
     # YoY growth
     monthly_s = monthly.sort_values('date').copy().reset_index(drop=True)
-    monthly_s['exp_yoy'] = monthly_s.groupby('Month')['DOLLARS_exp'].pct_change() * 100
-    monthly_s['imp_yoy'] = monthly_s.groupby('Month')['DOLLARS_imp'].pct_change() * 100
+    monthly_s['exp_yoy'] = monthly_s.groupby('MONTH')['DOLLARS_exp'].pct_change() * 100
+    monthly_s['imp_yoy'] = monthly_s.groupby('MONTH')['DOLLARS_imp'].pct_change() * 100
 
     # Rolling averages
     mr = monthly.sort_values('date').copy().reset_index(drop=True)
@@ -113,20 +113,20 @@ def render():
             fig = go.Figure()
             for m in partial_months_short:
                 fig.add_vrect(x0=m, x1=m, fillcolor='rgba(245,158,11,0.06)', line_width=0, layer='below')
-            fig.add_trace(go.Scatter(x=seas_e['Month'].str[:3], y=seas_e['avg_m']+seas_e['std_m'],
+            fig.add_trace(go.Scatter(x=seas_e['MONTH'].str[:3], y=seas_e['avg_m']+seas_e['std_m'],
                 fill=None, mode='lines', line=dict(color='rgba(0,0,0,0)'), showlegend=False))
-            fig.add_trace(go.Scatter(x=seas_e['Month'].str[:3], y=seas_e['avg_m']-seas_e['std_m'],
+            fig.add_trace(go.Scatter(x=seas_e['MONTH'].str[:3], y=seas_e['avg_m']-seas_e['std_m'],
                 fill='tonexty', mode='lines', fillcolor='rgba(16,217,160,0.08)',
                 line=dict(color='rgba(0,0,0,0)'), name='±1σ band', showlegend=True))
             fig.add_trace(go.Scatter(
-                x=seas_e[~partial_mask_e]['Month'].str[:3], y=seas_e[~partial_mask_e]['avg_m'],
+                x=seas_e[~partial_mask_e]['MONTH'].str[:3], y=seas_e[~partial_mask_e]['avg_m'],
                 mode='lines+markers', name=f'Avg ({total_years} yrs)',
                 line=dict(color='#10d9a0', width=3),
                 marker=dict(size=11, color='#10d9a0', symbol='circle'),
                 hovertemplate='<b>%{x}</b>: $%{y:.0f}M avg (' + str(total_years) + ' years)<extra></extra>'))
             if partial_mask_e.any():
                 fig.add_trace(go.Scatter(
-                    x=seas_e[partial_mask_e]['Month'].str[:3], y=seas_e[partial_mask_e]['avg_m'],
+                    x=seas_e[partial_mask_e]['MONTH'].str[:3], y=seas_e[partial_mask_e]['avg_m'],
                     mode='markers', name=f'Avg ({total_years-1} yrs · {max_yr} N/A)',
                     marker=dict(size=12, color='#f59e0b', symbol='diamond',
                                 line=dict(color='#f59e0b', width=2)),
@@ -141,20 +141,20 @@ def render():
             fig2 = go.Figure()
             for m in partial_months_short:
                 fig2.add_vrect(x0=m, x1=m, fillcolor='rgba(245,158,11,0.06)', line_width=0, layer='below')
-            fig2.add_trace(go.Scatter(x=seas_i['Month'].str[:3], y=seas_i['avg_m']+seas_i['std_m'],
+            fig2.add_trace(go.Scatter(x=seas_i['MONTH'].str[:3], y=seas_i['avg_m']+seas_i['std_m'],
                 fill=None, mode='lines', line=dict(color='rgba(0,0,0,0)'), showlegend=False))
-            fig2.add_trace(go.Scatter(x=seas_i['Month'].str[:3], y=seas_i['avg_m']-seas_i['std_m'],
+            fig2.add_trace(go.Scatter(x=seas_i['MONTH'].str[:3], y=seas_i['avg_m']-seas_i['std_m'],
                 fill='tonexty', mode='lines', fillcolor='rgba(244,63,94,0.08)',
                 line=dict(color='rgba(0,0,0,0)'), name='±1σ band', showlegend=True))
             fig2.add_trace(go.Scatter(
-                x=seas_i[~partial_mask_i]['Month'].str[:3], y=seas_i[~partial_mask_i]['avg_m'],
+                x=seas_i[~partial_mask_i]['MONTH'].str[:3], y=seas_i[~partial_mask_i]['avg_m'],
                 mode='lines+markers', name=f'Avg ({total_years} yrs)',
                 line=dict(color='#f43f5e', width=3),
                 marker=dict(size=11, color='#f43f5e', symbol='circle'),
                 hovertemplate='<b>%{x}</b>: $%{y:.0f}M avg (' + str(total_years) + ' years)<extra></extra>'))
             if partial_mask_i.any():
                 fig2.add_trace(go.Scatter(
-                    x=seas_i[partial_mask_i]['Month'].str[:3], y=seas_i[partial_mask_i]['avg_m'],
+                    x=seas_i[partial_mask_i]['MONTH'].str[:3], y=seas_i[partial_mask_i]['avg_m'],
                     mode='markers', name=f'Avg ({total_years-1} yrs · {max_yr} N/A)',
                     marker=dict(size=12, color='#f59e0b', symbol='diamond',
                                 line=dict(color='#f59e0b', width=2)),
@@ -175,12 +175,12 @@ def render():
             pm = df_s['n_years'] < total_years
             if (~pm).any():
                 fig3.add_trace(go.Bar(
-                    x=df_s[~pm]['Month'].str[:3], y=df_s[~pm]['idx'],
+                    x=df_s[~pm]['MONTH'].str[:3], y=df_s[~pm]['idx'],
                     name=f'{name_prefix} ({total_years} yrs)', marker_color=base_color, opacity=0.88,
                     hovertemplate='<b>%{x}</b> ' + name_prefix + ' Index: %{y:.1f}<br>' + str(total_years) + ' years<extra></extra>'))
             if pm.any():
                 fig3.add_trace(go.Bar(
-                    x=df_s[pm]['Month'].str[:3], y=df_s[pm]['idx'],
+                    x=df_s[pm]['MONTH'].str[:3], y=df_s[pm]['idx'],
                     name=f'{name_prefix} ({total_years-1} yrs · {max_yr} N/A)',
                     marker=dict(color=base_color, opacity=0.45,
                                 pattern=dict(shape='/', size=6, solidity=0.4)),
@@ -198,14 +198,14 @@ def render():
         period_banner("Year-Over-Year Overlay", data_period, '#60a5fa',
                       f"Each line = one year's monthly exports  |  {max_yr} highlighted as solid line")
         st.markdown('<div class="chart-card"><div class="chart-title">🔄 Year-Over-Year Monthly Export Overlay — All Years</div>', unsafe_allow_html=True)
-        all_years = sorted(monthly['Year'].unique())
+        all_years = sorted(monthly['YEAR'].unique())
         year_pal  = ['#475569', '#64748b', '#a78bfa', '#60a5fa', '#f59e0b', '#10d9a0', '#f43f5e', '#2dd4bf']
         fig4 = go.Figure()
         for i, yr in enumerate(all_years):
-            d = monthly[monthly['Year'] == yr].sort_values('Month_Num')
+            d = monthly[monthly['YEAR'] == yr].sort_values('Month_Num')
             is_latest = yr == max_yr
             fig4.add_trace(go.Scatter(
-                x=d['Month'].str[:3], y=d['DOLLARS_exp'] / 1e3,
+                x=d['MONTH'].str[:3], y=d['DOLLARS_exp'] / 1e3,
                 mode='lines+markers', name=str(yr),
                 line=dict(color=year_pal[i % len(year_pal)], width=3 if is_latest else 1.5,
                           dash='solid' if is_latest else 'dot'),
@@ -254,12 +254,12 @@ def render():
         st.markdown('<div class="chart-card"><div class="chart-title">📊 Annual Growth Rates — Exports vs Imports (%)</div>', unsafe_allow_html=True)
         fig7 = go.Figure()
         fig7.add_hline(y=0, line=dict(color='rgba(255,255,255,0.15)', width=1))
-        fig7.add_trace(go.Bar(x=ann2['Year'], y=ann2['exp_g'], name='Export Growth',
+        fig7.add_trace(go.Bar(x=ann2['YEAR'], y=ann2['exp_g'], name='Export Growth',
             marker_color='#10d9a0', opacity=0.9,
             text=[f"{v:+.1f}%" for v in ann2['exp_g']], textposition='outside',
             textfont=dict(color='#10d9a0', size=11),
             hovertemplate='<b>Export Growth %{x}</b>: %{y:+.1f}%<extra></extra>'))
-        fig7.add_trace(go.Bar(x=ann2['Year'], y=ann2['imp_g'], name='Import Growth',
+        fig7.add_trace(go.Bar(x=ann2['YEAR'], y=ann2['imp_g'], name='Import Growth',
             marker_color='#f43f5e', opacity=0.9,
             text=[f"{v:+.1f}%" for v in ann2['imp_g']], textposition='outside',
             textfont=dict(color='#f43f5e', size=11),
@@ -326,9 +326,9 @@ def render():
         period_banner("Correlation Matrix Period", full_yr_period, '#a78bfa',
                       "Annual USD values  |  +1.0 = perfect co-movement  |  -1.0 = inverse movement")
         st.markdown('<div class="chart-card"><div class="chart-title">🔗 Export Category Correlation Matrix (Annual)</div>', unsafe_allow_html=True)
-        ec_piv = (exp.groupby(['Year', 'CATEGORY'])['DOLLARS'].sum()
+        ec_piv = (exp.groupby(['YEAR', 'CATEGORY'])['DOLLARS'].sum()
                   .reset_index()
-                  .pivot_table(index='Year', columns='CATEGORY', values='DOLLARS')
+                  .pivot_table(index='YEAR', columns='CATEGORY', values='DOLLARS')
                   .fillna(0))
         corr = ec_piv.corr()
         fig11 = go.Figure(go.Heatmap(
