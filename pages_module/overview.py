@@ -24,16 +24,16 @@ def render():
 
     # ── Defensive date column ──────────────────────────────────────────────
     if 'date' not in monthly.columns:
-        monthly = monthly.sort_values(['Year','Month_Num']).reset_index(drop=True)
+        monthly = monthly.sort_values(['YEAR','Month_Num']).reset_index(drop=True)
         monthly['date'] = pd.to_datetime(
-            monthly['Year'].astype(str) + '-' +
+            monthly['YEAR'].astype(str) + '-' +
             monthly['Month_Num'].astype(str).str.zfill(2) + '-01'
         )
 
     # ── Dynamic KPI reference years ────────────────────────────────────────
-    latest_full_yr = ann[ann['Year'] < max_yr]['Year'].max()   # last complete year
-    latest_row = ann[ann['Year'] == latest_full_yr].iloc[0]
-    prev_row   = ann[ann['Year'] == latest_full_yr - 1].iloc[0] if latest_full_yr - 1 in ann['Year'].values else latest_row
+    latest_full_yr = ann[ann['YEAR'] < max_yr]['YEAR'].max()   # last complete year
+    latest_row = ann[ann['YEAR'] == latest_full_yr].iloc[0]
+    prev_row   = ann[ann['YEAR'] == latest_full_yr - 1].iloc[0] if latest_full_yr - 1 in ann['YEAR'].values else latest_row
 
     exp_delta = (latest_row['exports'] - prev_row['exports']) / prev_row['exports'] * 100
     imp_delta = (latest_row['imports'] - prev_row['imports']) / prev_row['imports'] * 100
@@ -72,7 +72,7 @@ def render():
     kpi(c1, f"📦 Total Exports ({min_yr}–{max_yr})", fmt_usd(total_exp),   "Cumulative",  None, 'green')
     kpi(c2, f"🛒 Total Imports ({min_yr}–{max_yr})", fmt_usd(total_imp),   "Cumulative",  None, 'red')
     kpi(c3, "💸 Cumulative Deficit",                 fmt_usd(abs(total_deficit)), f"{min_yr}–{max_yr}", None, 'gold')
-    kpi(c4, "🏆 Best Export Year", str(int(best_exp_row['Year'])), fmt_usd(best_exp_row['exports']), None, 'teal')
+    kpi(c4, "🏆 Best Export Year", str(int(best_exp_row['YEAR'])), fmt_usd(best_exp_row['exports']), None, 'teal')
 
     st.markdown("<div style='height:1.2rem'></div>", unsafe_allow_html=True)
 
@@ -103,9 +103,9 @@ def render():
     with col2:
         st.markdown('<div class="chart-card"><div class="chart-title">📊 Annual Trade Summary (USD Billions)</div>', unsafe_allow_html=True)
         fig2 = go.Figure()
-        fig2.add_trace(go.Bar(x=ann['Year'], y=ann['imports']/1e6, name='Imports', marker_color='#f43f5e',
+        fig2.add_trace(go.Bar(x=ann['YEAR'], y=ann['imports']/1e6, name='Imports', marker_color='#f43f5e',
             hovertemplate='<b>Imports %{x}</b>: $%{y:.2f}B<extra></extra>'))
-        fig2.add_trace(go.Bar(x=ann['Year'], y=ann['exports']/1e6, name='Exports', marker_color='#10d9a0',
+        fig2.add_trace(go.Bar(x=ann['YEAR'], y=ann['exports']/1e6, name='Exports', marker_color='#10d9a0',
             hovertemplate='<b>Exports %{x}</b>: $%{y:.2f}B<extra></extra>'))
         fig2.update_layout(**pl(320, yaxis=dict(title='USD Billions'), barmode='group',
             legend=dict(orientation='h', y=1.05, bgcolor='rgba(0,0,0,0)', font=dict(color='#64748b'))))
@@ -117,7 +117,7 @@ def render():
     with col1:
         st.markdown('<div class="chart-card"><div class="chart-title">⚖️ Annual Trade Balance (USD Billions)</div>', unsafe_allow_html=True)
         fig3 = go.Figure(go.Bar(
-            x=ann['Year'], y=ann['balance']/1e6,
+            x=ann['YEAR'], y=ann['balance']/1e6,
             marker_color=['#f43f5e' if x<0 else '#10d9a0' for x in ann['balance']],
             text=[fmt_usd(v) for v in ann['balance']], textposition='outside',
             textfont=dict(color='#64748b', size=10),
@@ -130,9 +130,9 @@ def render():
     with col2:
         st.markdown('<div class="chart-card"><div class="chart-title">📐 Export Coverage Ratio (%)</div>', unsafe_allow_html=True)
         fig4 = go.Figure()
-        fig4.add_shape(type='line', x0=ann['Year'].min()-0.5, x1=ann['Year'].max()+0.5,
+        fig4.add_shape(type='line', x0=ann['YEAR'].min()-0.5, x1=ann['YEAR'].max()+0.5,
             y0=100, y1=100, line=dict(color='rgba(255,255,255,0.15)', dash='dot', width=1.5))
-        fig4.add_trace(go.Scatter(x=ann['Year'], y=ann['coverage_ratio'],
+        fig4.add_trace(go.Scatter(x=ann['YEAR'], y=ann['coverage_ratio'],
             mode='lines+markers+text', line=dict(color='#60a5fa', width=3),
             marker=dict(size=10, color='#60a5fa'),
             text=[f"{v}%" for v in ann['coverage_ratio']],
@@ -144,7 +144,7 @@ def render():
 
     with col3:
         st.markdown('<div class="chart-card"><div class="chart-title">🔁 Trade Volume (USD Billions)</div>', unsafe_allow_html=True)
-        fig5 = go.Figure(go.Scatter(x=ann['Year'], y=ann['trade_volume']/1e6,
+        fig5 = go.Figure(go.Scatter(x=ann['YEAR'], y=ann['trade_volume']/1e6,
             mode='lines+markers', fill='tozeroy', fillcolor='rgba(167,139,250,0.08)',
             line=dict(color='#a78bfa', width=2.5), marker=dict(size=8),
             hovertemplate='<b>Volume %{x}</b>: $%{y:.2f}B<extra></extra>'))
@@ -191,7 +191,7 @@ def render():
 
     # ── Seasonality heatmap ────────────────────────────────────────────────
     st.markdown('<div class="chart-card"><div class="chart-title">🌡️ Monthly Trade Balance Heatmap — Seasonality Pattern (USD Millions)</div>', unsafe_allow_html=True)
-    pvt = monthly.pivot_table(index='Year', columns='Month', values='balance', aggfunc='sum') / 1e3
+    pvt = monthly.pivot_table(index='YEAR', columns='MONTH', values='balance', aggfunc='sum') / 1e3
     pvt = pvt.reindex(columns=[m for m in MONTH_ORDER if m in pvt.columns])
     fig8 = go.Figure(go.Heatmap(
         z=pvt.values, x=[m[:3] for m in pvt.columns], y=[str(y) for y in pvt.index],
@@ -214,11 +214,11 @@ def render():
 
     with col1:
         st.markdown(f"""<div class="insight-box"><strong style="color:#10d9a0;">📤 Peak Export Month</strong><br>
-        <b>{bm['Month']} {int(bm['Year'])}</b> — highest single-month exports at <strong>{fmt_usd(bm['DOLLARS_exp'])}</strong>.</div>""", unsafe_allow_html=True)
+        <b>{bm['MONTH']} {int(bm['YEAR'])}</b> — highest single-month exports at <strong>{fmt_usd(bm['DOLLARS_exp'])}</strong>.</div>""", unsafe_allow_html=True)
     with col2:
         st.markdown(f"""<div class="insight-box" style="background:linear-gradient(135deg,rgba(244,63,94,0.07),rgba(244,63,94,0.02));border-color:rgba(244,63,94,0.2);">
         <strong style="color:#f43f5e;">📉 Largest Deficit Month</strong><br>
-        <b>{wb['Month']} {int(wb['Year'])}</b> — highest monthly deficit: <strong>{fmt_usd(abs(wb['balance']))}</strong>.</div>""", unsafe_allow_html=True)
+        <b>{wb['MONTH']} {int(wb['YEAR'])}</b> — highest monthly deficit: <strong>{fmt_usd(abs(wb['balance']))}</strong>.</div>""", unsafe_allow_html=True)
     with col3:
         st.markdown(f"""<div class="insight-box" style="background:linear-gradient(135deg,rgba(245,158,11,0.07),rgba(245,158,11,0.02));border-color:rgba(245,158,11,0.2);">
         <strong style="color:#f59e0b;">📊 Average Monthly Deficit</strong><br>
