@@ -123,7 +123,7 @@ def _remove_subtotals_and_duplicates(df):
     # The SMALLER DOLLARS value = genuine monthly figure.
     # The LARGER DOLLARS value = quarter-to-date cumulative (must be excluded).
     df = (df.sort_values('DOLLARS', ascending=True)
-            .drop_duplicates(subset=['Year', 'Month', 'CATEGORY', 'PRODUCT'], keep='first')
+            .drop_duplicates(subset=['YEAR', 'MONTH', 'CATEGORY', 'PRODUCT'], keep='first')
             .reset_index(drop=True))
 
     return df
@@ -138,7 +138,7 @@ def load_data():
     for df in [exp, imp]:
         for col in ['QUANTITY', 'RUPEES', 'DOLLARS', '% QUANTITY', '% RUPEES', '% DOLLARS']:
             df[col] = pd.to_numeric(df[col], errors='coerce')
-        df['Month_Num'] = df['Month'].apply(
+        df['Month_Num'] = df['MONTH'].apply(
             lambda m: MONTH_ORDER.index(m) + 1 if m in MONTH_ORDER else 0
         )
         df = _remove_subtotals_and_duplicates(df)
@@ -151,11 +151,11 @@ def load_data():
 def get_date_range():
     """Return (min_year, max_year, latest_month_label) from the actual data."""
     exp, imp = load_data()
-    all_years  = sorted(set(exp['Year'].unique()) | set(imp['Year'].unique()))
+    all_years  = sorted(set(exp['YEAR'].unique()) | set(imp['YEAR'].unique()))
     max_year   = max(all_years)
     min_year   = min(all_years)
     # Latest month in latest year
-    latest_months = exp[exp['Year']==max_year]['Month_Num'].max()
+    latest_months = exp[exp['YEAR']==max_year]['Month_Num'].max()
     latest_month_name = MONTH_ORDER[latest_months - 1] if latest_months > 0 else 'N/A'
     return min_year, max_year, latest_month_name
 
@@ -163,14 +163,14 @@ def get_date_range():
 @st.cache_data
 def get_monthly_totals():
     exp, imp = load_data()
-    e = exp.groupby(['Year','Month','Month_Num'])['DOLLARS'].sum().reset_index()
-    i = imp.groupby(['Year','Month','Month_Num'])['DOLLARS'].sum().reset_index()
-    merged = e.merge(i, on=['Year','Month','Month_Num'], suffixes=('_exp','_imp'))
+    e = exp.groupby(['YEAR','MONTH','Month_Num'])['DOLLARS'].sum().reset_index()
+    i = imp.groupby(['YEAR','MONTH','Month_Num'])['DOLLARS'].sum().reset_index()
+    merged = e.merge(i, on=['YEAR','MONTH','Month_Num'], suffixes=('_exp','_imp'))
     merged['balance'] = merged['DOLLARS_exp'] - merged['DOLLARS_imp']
-    merged['Month_Cat'] = pd.Categorical(merged['Month'], categories=MONTH_ORDER, ordered=True)
-    merged = merged.sort_values(['Year','Month_Cat']).reset_index(drop=True)
+    merged['Month_Cat'] = pd.Categorical(merged['MONTH'], categories=MONTH_ORDER, ordered=True)
+    merged = merged.sort_values(['YEAR','Month_Cat']).reset_index(drop=True)
     merged['date'] = pd.to_datetime(
-        merged['Year'].astype(str) + '-' +
+        merged['YEAR'].astype(str) + '-' +
         merged['Month_Num'].astype(str).str.zfill(2) + '-01'
     )
     return merged
@@ -179,27 +179,27 @@ def get_monthly_totals():
 @st.cache_data
 def get_annual_totals():
     exp, imp = load_data()
-    e = exp.groupby('Year')['DOLLARS'].sum().reset_index().rename(columns={'DOLLARS':'exports'})
-    i = imp.groupby('Year')['DOLLARS'].sum().reset_index().rename(columns={'DOLLARS':'imports'})
-    df = e.merge(i, on='Year')
+    e = exp.groupby('YEAR')['DOLLARS'].sum().reset_index().rename(columns={'DOLLARS':'exports'})
+    i = imp.groupby('YEAR')['DOLLARS'].sum().reset_index().rename(columns={'DOLLARS':'imports'})
+    df = e.merge(i, on='YEAR')
     df['balance']        = df['exports'] - df['imports']
     df['trade_volume']   = df['exports'] + df['imports']
     df['coverage_ratio'] = (df['exports'] / df['imports'] * 100).round(1)
-    return df.sort_values('Year').reset_index(drop=True)
+    return df.sort_values('YEAR').reset_index(drop=True)
 
 
 @st.cache_data
 def get_category_annual(side='export'):
     exp, imp = load_data()
     df = exp if side == 'export' else imp
-    return df.groupby(['Year','CATEGORY'])['DOLLARS'].sum().reset_index()
+    return df.groupby(['YEAR','CATEGORY'])['DOLLARS'].sum().reset_index()
 
 
 @st.cache_data
 def get_product_annual(side='export'):
     exp, imp = load_data()
     df = exp if side == 'export' else imp
-    return df.groupby(['Year','CATEGORY','PRODUCT'])['DOLLARS'].sum().reset_index()
+    return df.groupby(['YEAR','CATEGORY','PRODUCT'])['DOLLARS'].sum().reset_index()
 
 
 # ── Formatting helpers ────────────────────────────────────────────────────────
