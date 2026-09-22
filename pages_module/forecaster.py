@@ -38,9 +38,9 @@ def render():
     monthly = get_monthly_totals()
 
     if 'date' not in monthly.columns:
-        monthly = monthly.sort_values(['Year','Month_Num']).reset_index(drop=True)
+        monthly = monthly.sort_values(['YEAR','Month_Num']).reset_index(drop=True)
         monthly['date'] = pd.to_datetime(
-            monthly['Year'].astype(str)+'-'+monthly['Month_Num'].astype(str).str.zfill(2)+'-01')
+            monthly['YEAR'].astype(str)+'-'+monthly['Month_Num'].astype(str).str.zfill(2)+'-01')
 
     ms = monthly.sort_values('date').reset_index(drop=True)
 
@@ -191,7 +191,7 @@ def render():
         fig4 = go.Figure()
         fig4.add_hline(y=target, line=dict(color='#f59e0b',dash='dash',width=2),
             annotation_text=f'Target: ${target}B', annotation_font=dict(color='#f59e0b',size=11))
-        fig4.add_trace(go.Bar(x=ann['Year'], y=ann['exports']/1e6,
+        fig4.add_trace(go.Bar(x=ann['YEAR'], y=ann['exports']/1e6,
             marker_color=['#10d9a0' if v/1e6>=target else '#f43f5e' for v in ann['exports']],
             text=[fmt_usd(v) for v in ann['exports']], textposition='outside',
             textfont=dict(color='#64748b',size=11),
